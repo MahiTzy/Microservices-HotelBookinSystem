@@ -1,0 +1,79 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/microservices
+    username: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  application:
+    name: user-service
+  config:
+    import: optional:configserver:http://localhost:8084
+  security:
+    oauth2:
+      client:
+        registration:
+          my-internal-client:
+            provider: okta
+            authorization-grant-type: client_credentials
+            scope: internal
+            client-id: CLIENT_ID
+            client-secret: CLIENT_SECRET
+        provider:
+          okta:
+            issuer-uri: https://dev-26630661.okta.com/oauth2/default
+
+
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      ratingHotelBreaker:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        sliding-window-type: COUNT_BASED
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        recordExceptions:
+          - java.lang.RuntimeException
+          - java.io.IOException
+        ignoreExceptions:
+          - java.lang.IllegalArgumentException
+          - java.lang.IllegalStateException
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        eventConsumerBufferSize: 10
+  retry:
+    instances:
+      ratingHotelRetry:
+        max-attempts: 3
+        wait-duration: 5s
+  ratelimiter:
+    instances:
+        ratingHotelRateLimiter:
+            limit-for-period: 2
+            limit-refresh-period: 5s
+            timeout-duration: 0s
+
+okta:
+  oauth2:
+    issuer: https://dev-26630661.okta.com/oauth2/default
+    audience: api://default
+
+
